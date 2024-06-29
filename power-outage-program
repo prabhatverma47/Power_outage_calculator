@@ -1,0 +1,54 @@
+raspberry pi set time : sudo timedatectl set-timezone Asia/Kolkata
+
+power.sh program:
+#!/bin/bash
+
+sleep 60
+
+# Define log file
+LOG_FILE="/home/pi1123324/log.csv"
+
+# Get current date and time
+current_date=$(date '+%Y-%m-%d')
+current_time=$(date '+%H:%M:%S')
+
+# Check if the log file exists
+if [ ! -f "$LOG_FILE" ]; then
+    echo "Date,Start Time,End Time" > "$LOG_FILE"
+fi
+
+# Function to log start time
+log_start_time() {
+    current_date=$(date '+%Y-%m-%d')
+    current_time=$(date '+%H:%M:%S')
+    echo "$current_date,$current_time," >> "$LOG_FILE"
+}
+
+# Function to update end time
+update_end_time() {
+    current_time=$(date '+%H:%M:%S')
+    # Use a temporary file to update the end time of the last line
+    head -n -1 "$LOG_FILE" > /tmp/log.csv
+    last_line=$(tail -n 1 "$LOG_FILE" | awk -F, -v OFS=, -v end_time="$current_time" '{$3=end_time; print}')
+    echo "$last_line" >> /tmp/log.csv
+    mv /tmp/log.csv "$LOG_FILE"
+}
+
+# Log the start time (new entry on reboot)
+log_start_time
+
+# Infinite loop to update the log every minute
+while true; do
+    sleep 60
+    new_date=$(date '+%Y-%m-%d')
+    current_time=$(date '+%H:%M:%S')
+
+    if [ "$current_date" != "$new_date" ]; then
+        # If the date has changed, log a new start time
+        current_date=$new_date
+        log_start_time
+    else
+        # Update the end time of the current entry
+        update_end_time
+    fi
+done
